@@ -16,8 +16,7 @@ interface Recipe {
   category: string;
   fileType: 'pdf' | 'image';
   fileUrl: string;
-  storagePath?: string;
-  createdAt: string;
+  createdAt: any;
   userId: string;
   tags?: string[];
 }
@@ -37,18 +36,21 @@ export default function DashboardPage() {
   const recipesRef = collection(firestore, 'recipes');
   const userRecipesQuery = user
     ? query(recipesRef, where('userId', '==', user.uid))
-    : query(recipesRef, where('userId', '==', '___no_user___'));
+    : query(recipesRef, where('userId', '==', '__no_user__'));
 
   const [recipesSnapshot, loadingRecipes, error] = useCollection(userRecipesQuery);
 
-  const handleDeleteRecipe = async (recipeId: string, storagePath?: string) => {
+  const handleDeleteRecipe = async (recipeId: string, fileUrl: string) => {
     const confirmDelete = window.confirm('Weet je zeker dat je dit recept wilt verwijderen?');
     if (!confirmDelete) return;
 
     try {
       await deleteDoc(doc(firestore, 'recipes', recipeId));
 
-      if (storagePath) {
+      if (fileUrl.startsWith('https://')) {
+        // Firebase Storage delete vanuit URL
+        const url = new URL(fileUrl);
+        const storagePath = decodeURIComponent(url.pathname.split('/o/')[1].split('?')[0]);
         const fileRef = ref(storage, storagePath);
         await deleteObject(fileRef);
       }
@@ -77,10 +79,7 @@ export default function DashboardPage() {
       <Dashboard
         recipes={recipes}
         onEditRecipe={(recipe) => console.log('Edit:', recipe)}
-        onDeleteRecipe={(id, _) => {
-          const recipe = recipes.find((r) => r.id === id);
-          handleDeleteRecipe(id, recipe?.storagePath);
-        }}
+        onDeleteRecipe={(id, fileUrl) => handleDeleteRecipe(id, fileUrl)}
       />
 
       {toastMessage && (

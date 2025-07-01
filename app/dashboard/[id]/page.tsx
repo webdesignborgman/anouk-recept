@@ -1,102 +1,108 @@
-"use client";
+'use client';
 
-import { useEffect, useState, use } from "react";
-import { useRouter } from "next/navigation";
-import { auth } from "../../../firebase";
-import { useAuthState } from "react-firebase-hooks/auth";
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { auth, firestore } from '../../../firebase';
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import Image from 'next/image';
+import { ArrowLeft } from 'lucide-react';
 
-// Interface voor itemgegevens
-interface Item {
-  uid: string;
-  title: string;
-  url?: string;
-  createdAt: string;
+interface Recipe {
+  id: string;
+  name: string;
+  category: string;
+  fileType: 'pdf' | 'image';
+  fileUrl: string;
+  createdAt: any;
+  userId: string;
+  tags?: string[];
 }
 
-export default function ItemDetail({ params }: { params: Promise<{ id: string }> }) {
-  // Unwrap params
-  const { id } = use(params);
-  const [user, loading] = useAuthState(auth);
-  const [item, setItem] = useState<Item | null>(null);
+export default function RecipeDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const [user, loadingUser] = useAuthState(auth);
   const router = useRouter();
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (loading) return;
-    if (!user) {
-      router.push("/login");
-      return;
+    if (!loadingUser && !user) {
+      router.push('/login');
     }
+  }, [loadingUser, user, router]);
 
-    async function loadItem() {
+  useEffect(() => {
+    const fetchRecipe = async () => {
       try {
-        // Haal ID-token
-        if (!user) {
-          throw new Error("User is not authenticated");
+        const docRef = doc(firestore, 'recipes', id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data() as Omit<Recipe, 'id'>;
+          setRecipe({ id: docSnap.id, ...data });
+        } else {
+          setError('Recept niet gevonden.');
         }
-        const idToken = await user.getIdToken();
-        const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!;
-        const databaseName = "anouk-recept"; // jouw database-naam
-        const url =
-          `https://firestore.googleapis.com/v1/projects/${projectId}` +
-          `/databases/${databaseName}/documents/items/${id}`;
-
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${idToken}` },
-        });
-        if (!res.ok) {
-          console.error("REST fetch failed:", await res.text());
-          return router.push("/dashboard");
-        }
-
-        const json = await res.json();
-        const f = json.fields;
-        const data: Item = {
-          uid: f.uid.stringValue,
-          title: f.title.stringValue,
-          url: f.url?.stringValue,
-          createdAt: f.createdAt.timestampValue,
-        };
-
-        // Check uid
-        if (data.uid !== user.uid) {
-          return router.push("/dashboard");
-        }
-
-        setItem(data);
       } catch (err) {
-        console.error("Error loading item via REST:", err);
-        router.push("/dashboard");
+        console.error('Error loading recipe:', err);
+        setError('Er ging iets mis bij het ophalen van het recept.');
+      } finally {
+        setLoading(false);
       }
+    };
+
+    if (user) {
+      fetchRecipe();
     }
+  }, [id, user]);
 
-    loadItem();
-  }, [loading, user, id, router]);
-
-  if (loading || !item) {
+  if (loadingUser || loading) {
     return <div className="p-4 text-center">Loading…</div>;
   }
 
+  if (error || !recipe) {
+    return <div className="p-4 text-center text-red-600">{error || 'Recept niet gevonden.'}</div>;
+  }
+
   return (
-    <div className="max-w-md mx-auto mt-8 bg-white p-6 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-800">{item.title}</h2>
-      {item.url ? (
+    <div className="max-w-2xl mx-auto mt-8 bg-white p-6 rounded-lg shadow-lg">
+      {/* Back button */}
+      <button
+        onClick={() => router.back()}
+        className="text-orange-600 hover:text-orange-800 mb-4 flex items-center space-x-2"
+      >
+        <ArrowLeft size={18} />
+        <span>Terug naar My Recipes</span>
+      </button>
+
+      {/* Title */}
+      <h1 className="text-3xl font-bold mb-2 text-orange-700">{recipe.name}</h1>
+      <p className="text-sm text-gray-500 mb-4">{recipe.category}</p>
+
+      {/* Preview */}
+      {recipe.fileType === 'image' ? (
+        <div className="overflow-hidden rounded border">
+          <Image
+            src={recipe.fileUrl}
+            alt={recipe.name}
+            width={800}
+            height={600}
+            className="w-full h-auto object-contain"
+            style={{ touchAction: 'manipulation' }}
+          />
+        </div>
+      ) : (
         <a
-          href={item.url}
+          href={recipe.fileUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition mb-4"
+          className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
         >
-          Open bestand / link
+          Open PDF
         </a>
-      ) : (
-        <p className="text-gray-600 mb-4">Er is geen URL opgeslagen.</p>
       )}
-      <button
-        onClick={() => router.push("/dashboard")}
-        className="mt-4 text-gray-500 underline hover:text-gray-700"
-      >
-        ← Terug naar overzicht
-      </button>
     </div>
   );
 }
