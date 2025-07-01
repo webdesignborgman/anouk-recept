@@ -26,9 +26,6 @@ export const Header = ({ user, onSignOut }: HeaderProps) => {
 
         {/* Desktop Menu */}
         <nav className="hidden md:flex items-center space-x-6">
-          <Link href="/" className="text-gray-700 hover:text-orange-600 transition-colors">
-            Home
-          </Link>
           <Link href="/dashboard" className="text-gray-700 hover:text-orange-600 transition-colors">
             My Recipes
           </Link>
@@ -42,10 +39,33 @@ export const Header = ({ user, onSignOut }: HeaderProps) => {
               Profile
             </Link>
           )}
+
+          {/* User Avatar or Placeholder */}
+          <div className="flex items-center space-x-2">
+            {user ? (
+              <>
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt="Profile"
+                    className="w-8 h-8 rounded-full object-cover border border-gray-300"
+                  />
+                ) : (
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <User size={16} className="text-orange-600" />
+                  </div>
+                )}
+                <span className="text-sm text-gray-700">{user.displayName || user.email}</span>
+              </>
+            ) : (
+              <span className="text-sm text-gray-500">Niet ingelogd</span>
+            )}
+          </div>
+
           {user && (
             <button
               onClick={onSignOut}
-              className="text-red-600 hover:text-red-800 transition-colors flex items-center space-x-1"
+              className="text-red-600 hover:text-red-800 transition-colors flex items-center space-x-1 text-sm"
             >
               <LogOut size={16} />
               <span>Sign Out</span>
@@ -75,13 +95,6 @@ export const Header = ({ user, onSignOut }: HeaderProps) => {
       {/* Mobile Menu */}
       {isMenuOpen && (
         <div className="md:hidden mt-2 border-t border-gray-100 px-4 pb-4 space-y-3">
-          <Link
-            href="/"
-            className="block py-2 text-gray-700 hover:text-orange-600 transition-colors"
-            onClick={() => setIsMenuOpen(false)}
-          >
-            Home
-          </Link>
           <Link
             href="/dashboard"
             className="block py-2 text-gray-700 hover:text-orange-600 transition-colors"

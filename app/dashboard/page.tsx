@@ -1,82 +1,95 @@
 'use client';
 
-import Link from 'next/link';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth } from '../../firebase';
-import { Upload, FileText, Image, Search, ArrowRight, LogIn, UserPlus } from 'lucide-react';
+import { auth, firestore, storage } from '../../firebase';
+import { useCollection } from 'react-firebase-hooks/firestore';
+import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
+import { ref, deleteObject } from 'firebase/storage';
+import { Dashboard } from '../components/Dashboard';
+import { Toast } from '../components/Toast';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default function HomePage() {
-  const [user] = useAuthState(auth);
+interface Recipe {
+  id: string;
+  name: string;
+  category: string;
+  fileType: 'pdf' | 'image';
+  fileUrl: string;
+  storagePath?: string;
+  createdAt: string;
+  userId: string;
+  tags?: string[];
+}
+
+export default function DashboardPage() {
+  const [user, loadingUser] = useAuthState(auth);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loadingUser && !user) {
+      router.push('/login');
+    }
+  }, [loadingUser, user, router]);
+
+  const recipesRef = collection(firestore, 'recipes');
+  const userRecipesQuery = user
+    ? query(recipesRef, where('userId', '==', user.uid))
+    : query(recipesRef, where('userId', '==', '___no_user___'));
+
+  const [recipesSnapshot, loadingRecipes, error] = useCollection(userRecipesQuery);
+
+  const handleDeleteRecipe = async (recipeId: string, storagePath?: string) => {
+    const confirmDelete = window.confirm('Weet je zeker dat je dit recept wilt verwijderen?');
+    if (!confirmDelete) return;
+
+    try {
+      await deleteDoc(doc(firestore, 'recipes', recipeId));
+
+      if (storagePath) {
+        const fileRef = ref(storage, storagePath);
+        await deleteObject(fileRef);
+      }
+
+      setToastType('success');
+      setToastMessage('Recept succesvol verwijderd ✅');
+    } catch (err) {
+      console.error('Delete error:', err);
+      setToastType('error');
+      setToastMessage('Fout bij verwijderen ❌');
+    }
+  };
+
+  if (loadingUser || loadingRecipes || !user) {
+    return <div className="p-4">Loading...</div>;
+  }
+
+  const recipes: Recipe[] =
+    recipesSnapshot?.docs.map((doc) => ({
+      id: doc.id,
+      ...(doc.data() as Omit<Recipe, 'id'>),
+    })) ?? [];
 
   return (
-    <div className="bg-gradient-to-br from-orange-50 to-red-50 min-h-screen px-4 py-8">
-      <div className="max-w-md mx-auto text-center pt-8">
-        {/* Hero Heading */}
-        <h1 className="text-4xl font-bold text-gray-900 mb-4 leading-tight">
-          Your Personal
-          <span className="text-orange-600 block">Recipe Collection</span>
-        </h1>
-        <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-          Store and organize all your favorite recipes. Upload photos and PDFs to build your digital cookbook.
-        </p>
+    <>
+      <Dashboard
+        recipes={recipes}
+        onEditRecipe={(recipe) => console.log('Edit:', recipe)}
+        onDeleteRecipe={(id, _) => {
+          const recipe = recipes.find((r) => r.id === id);
+          handleDeleteRecipe(id, recipe?.storagePath);
+        }}
+      />
 
-        {/* CTA Buttons */}
-        <div className="space-y-4 mb-12">
-          {user ? (
-            <Link
-              href="/dashboard"
-              className="w-full bg-orange-600 text-white px-6 py-4 rounded-xl text-lg font-semibold hover:bg-orange-700 transition-colors shadow-lg flex items-center justify-center space-x-2"
-            >
-              <span>Go to My Recipes</span>
-              <ArrowRight size={20} />
-            </Link>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="w-full bg-orange-600 text-white px-6 py-4 rounded-xl text-lg font-semibold hover:bg-orange-700 transition-colors shadow-lg flex items-center justify-center space-x-2"
-              >
-                <LogIn size={20} />
-                <span>Login</span>
-              </Link>
-              <Link
-                href="/signup"
-                className="w-full border-2 border-orange-600 text-orange-600 px-6 py-4 rounded-xl text-lg font-semibold hover:bg-orange-600 hover:text-white transition-colors flex items-center justify-center space-x-2"
-              >
-                <UserPlus size={20} />
-                <span>Create Account</span>
-              </Link>
-            </>
-          )}
-        </div>
-
-        {/* Feature Highlights */}
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-xl shadow-lg">
-            <div className="bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="text-orange-600" size={20} />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">PDF Storage</h3>
-            <p className="text-gray-600 text-sm">Upload recipe PDFs and access them anywhere</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-lg">
-            <div className="bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Image className="text-orange-600" size={20} />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Photo Upload</h3>
-            <p className="text-gray-600 text-sm">Snap photos of recipe cards and cookbook pages</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-lg">
-            <div className="bg-orange-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="text-orange-600" size={20} />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Easy Search</h3>
-            <p className="text-gray-600 text-sm">Find any recipe quickly with smart search</p>
-          </div>
-        </div>
-      </div>
-    </div>
+      {toastMessage && (
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
+    </>
   );
 }

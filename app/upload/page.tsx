@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { auth, firestore, storage } from '../../firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { Toast } from '../components/Toast';
+import { storage, firestore, auth } from '../../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useRouter } from 'next/navigation';
 
@@ -14,8 +15,10 @@ export default function UploadPage() {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   const categories = ['Ontbijt', 'Lunch', 'Diner', 'Tussendoor', 'Extra informatie'];
 
@@ -23,17 +26,18 @@ export default function UploadPage() {
     e.preventDefault();
 
     if (!name || !category || !file) {
-      setError('Vul alle velden in en selecteer een bestand.');
+      setToastType('error');
+      setToastMessage('Vul alle velden in en selecteer een bestand.');
       return;
     }
 
     if (!user) {
-      setError('Je moet ingelogd zijn om te uploaden.');
+      setToastType('error');
+      setToastMessage('Je moet ingelogd zijn om te uploaden.');
       return;
     }
 
     setLoading(true);
-    setError('');
 
     try {
       const storageRef = ref(storage, `recipes/${user.uid}/${file.name}`);
@@ -49,10 +53,17 @@ export default function UploadPage() {
         createdAt: serverTimestamp(),
       });
 
-      router.push('/dashboard');
+      setToastType('success');
+      setToastMessage('Recept succesvol geüpload ✅');
+
+      // Kleine delay zodat toast zichtbaar blijft voor redirect
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
     } catch (err) {
       console.error('Upload error:', err);
-      setError('Er ging iets mis bij het uploaden.');
+      setToastType('error');
+      setToastMessage('Er ging iets mis bij het uploaden ❌');
     } finally {
       setLoading(false);
     }
@@ -61,8 +72,6 @@ export default function UploadPage() {
   return (
     <div className="max-w-2xl mx-auto p-8 bg-white shadow-md rounded-xl mt-8">
       <h1 className="text-3xl font-bold text-gray-900 mb-6">Upload Nieuw Recept</h1>
-
-      {error && <p className="text-red-600 mb-4">{error}</p>}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -110,6 +119,15 @@ export default function UploadPage() {
           {loading ? 'Bezig met uploaden...' : 'Recept Uploaden'}
         </button>
       </form>
+
+      {/* Toast */}
+      {toastMessage && (
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          onClose={() => setToastMessage(null)}
+        />
+      )}
     </div>
   );
 }

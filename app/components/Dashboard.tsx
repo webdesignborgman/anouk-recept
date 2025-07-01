@@ -10,6 +10,7 @@ interface Recipe {
   category: string;
   fileType: 'pdf' | 'image';
   fileUrl: string;
+  storagePath?: string;
   createdAt: string;
   userId: string;
   tags?: string[];
@@ -18,7 +19,7 @@ interface Recipe {
 interface DashboardProps {
   recipes: Recipe[];
   onEditRecipe: (recipe: Recipe) => void;
-  onDeleteRecipe: (recipeId: string) => void;
+  onDeleteRecipe: (recipeId: string, storagePath?: string) => void;
 }
 
 export const Dashboard = ({ recipes, onEditRecipe, onDeleteRecipe }: DashboardProps) => {
@@ -28,7 +29,9 @@ export const Dashboard = ({ recipes, onEditRecipe, onDeleteRecipe }: DashboardPr
       <div className="bg-white px-4 py-6 border-b border-gray-100 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Recipes</h1>
-          <p className="text-gray-600">{recipes.length} recipe{recipes.length !== 1 ? 's' : ''} stored</p>
+          <p className="text-gray-600">
+            {recipes.length} recipe{recipes.length !== 1 ? 's' : ''} stored
+          </p>
         </div>
         <Link
           href="/upload"
@@ -46,7 +49,9 @@ export const Dashboard = ({ recipes, onEditRecipe, onDeleteRecipe }: DashboardPr
               <Grid3x3 className="text-gray-400" size={24} />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No recipes yet</h3>
-            <p className="text-gray-600 mb-6">Start building your collection by uploading your first recipe</p>
+            <p className="text-gray-600 mb-6">
+              Start building your collection by uploading your first recipe
+            </p>
             <Link
               href="/upload"
               className="bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors"
@@ -63,13 +68,14 @@ export const Dashboard = ({ recipes, onEditRecipe, onDeleteRecipe }: DashboardPr
               <div className="flex items-center space-x-4">
                 {/* File preview */}
                 {recipe.fileType === 'image' ? (
-                  <Image
-                    src={recipe.fileUrl}
-                    alt={recipe.name}
-                    width={80}
-                    height={80}
-                    className="rounded object-cover"
-                  />
+                  <Link href={`/recipes/${recipe.id}`} className="block w-20 h-20 relative">
+                    <Image
+                      src={recipe.fileUrl}
+                      alt={recipe.name}
+                      fill
+                      className="rounded object-cover"
+                    />
+                  </Link>
                 ) : (
                   <a
                     href={recipe.fileUrl}
@@ -84,7 +90,12 @@ export const Dashboard = ({ recipes, onEditRecipe, onDeleteRecipe }: DashboardPr
 
                 {/* Recipe Info */}
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">{recipe.name}</h3>
+                  <Link
+                    href={`/recipes/${recipe.id}`}
+                    className="text-lg font-bold text-orange-600 hover:underline"
+                  >
+                    {recipe.name}
+                  </Link>
                   <p className="text-sm text-gray-500">{recipe.category}</p>
                 </div>
               </div>
@@ -98,19 +109,21 @@ export const Dashboard = ({ recipes, onEditRecipe, onDeleteRecipe }: DashboardPr
                   <Pencil size={16} />
                   <span>Edit</span>
                 </button>
-<button
-  onClick={() => {
-    const confirmDelete = window.confirm(`Are you sure you want to delete "${recipe.name}"?`);
-    if (confirmDelete) {
-      onDeleteRecipe(recipe.id);
-    }
-  }}
-  className="text-red-600 hover:text-red-800 flex items-center space-x-1 text-sm"
->
-  <Trash2 size={16} />
-  <span>Delete</span>
-</button>
 
+                <button
+                  onClick={() => {
+                    const confirmDelete = window.confirm(
+                      `Weet je zeker dat je "${recipe.name}" wilt verwijderen?`
+                    );
+                    if (confirmDelete) {
+                      onDeleteRecipe(recipe.id, recipe.storagePath);
+                    }
+                  }}
+                  className="text-red-600 hover:text-red-800 flex items-center space-x-1 text-sm"
+                >
+                  <Trash2 size={16} />
+                  <span>Delete</span>
+                </button>
               </div>
             </div>
           ))
