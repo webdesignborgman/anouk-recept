@@ -10,7 +10,7 @@ interface Recipe {
   category: string;
   fileType: 'pdf' | 'image';
   fileUrl: string;
-  createdAt: any;  // Firestore Timestamp of string
+  createdAt: string;
   userId: string;
   tags?: string[];
 }
@@ -30,8 +30,12 @@ export const Dashboard = ({ recipes, onEditRecipe, onDeleteRecipe }: DashboardPr
     return date.toLocaleDateString('nl-NL');
   };
 
-  const handleViewRecipe = (id: string) => {
-    router.push(`/recipes/${id}`);
+  const handleViewRecipe = (recipe: Recipe) => {
+    if (recipe.fileType === 'pdf') {
+      window.open(recipe.fileUrl, '_blank');
+    } else {
+      router.push(`/recipes/${recipe.id}`);
+    }
   };
 
   return (
@@ -47,14 +51,14 @@ export const Dashboard = ({ recipes, onEditRecipe, onDeleteRecipe }: DashboardPr
               key={recipe.id}
               className="bg-white rounded-xl shadow hover:shadow-md transition-shadow overflow-hidden flex flex-col"
             >
-              {/* Afbeelding of PDF */}
+              {/* Image or PDF icon */}
               <div className="h-40 bg-gray-100 flex items-center justify-center">
                 {recipe.fileType === 'image' ? (
                   <Image
                     src={recipe.fileUrl}
                     alt={recipe.name}
-                    width={300}
-                    height={200}
+                    width={200}
+                    height={150}
                     className="object-cover w-full h-full"
                   />
                 ) : (
@@ -71,7 +75,7 @@ export const Dashboard = ({ recipes, onEditRecipe, onDeleteRecipe }: DashboardPr
                 {/* Actions */}
                 <div className="mt-auto pt-4 flex justify-between text-sm">
                   <button
-                    onClick={() => handleViewRecipe(recipe.id)}
+                    onClick={() => handleViewRecipe(recipe)}
                     className="text-orange-600 hover:underline flex items-center space-x-1"
                   >
                     <Eye size={16} />

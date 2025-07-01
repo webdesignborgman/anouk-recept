@@ -21,76 +21,76 @@ interface Recipe {
 
 export default function RecipeDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [user, loadingUser] = useAuthState(auth);
   const router = useRouter();
+  const [user, loading] = useAuthState(auth);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loadingUser && !user) {
-      router.push('/login');
-    }
-  }, [loadingUser, user, router]);
+    if (loading) return;
 
-  useEffect(() => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
     const fetchRecipe = async () => {
       try {
         const docRef = doc(firestore, 'recipes', id);
         const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists()) {
-          const data = docSnap.data() as Omit<Recipe, 'id'>;
-          setRecipe({ id: docSnap.id, ...data });
-        } else {
+        if (!docSnap.exists()) {
           setError('Recept niet gevonden.');
+          return;
         }
+
+        const data = docSnap.data() as Omit<Recipe, 'id'>;
+
+        // Check of het recept van de ingelogde gebruiker is
+        if (data.userId !== user.uid) {
+          setError('Geen toegang tot dit recept.');
+          return;
+        }
+
+        setRecipe({ id: docSnap.id, ...data });
       } catch (err) {
-        console.error('Error loading recipe:', err);
-        setError('Er ging iets mis bij het ophalen van het recept.');
+        console.error('Fout bij ophalen recept:', err);
+        setError('Er ging iets mis bij het laden van het recept.');
       } finally {
-        setLoading(false);
+        setFetching(false);
       }
     };
 
-    if (user) {
-      fetchRecipe();
-    }
-  }, [id, user]);
+    fetchRecipe();
+  }, [id, user, loading, router]);
 
-  if (loadingUser || loading) {
-    return <div className="p-4 text-center">Loading…</div>;
+  if (loading || fetching) {
+    return <div className="p-4">Laden...</div>;
   }
 
-  if (error || !recipe) {
-    return <div className="p-4 text-center text-red-600">{error || 'Recept niet gevonden.'}</div>;
+  if (error) {
+    return <div className="p-4 text-red-600">{error}</div>;
+  }
+
+  if (!recipe) {
+    return null;
   }
 
   return (
     <div className="max-w-2xl mx-auto mt-8 bg-white p-6 rounded-lg shadow-lg">
-      {/* Back button */}
-      <button
-        onClick={() => router.back()}
-        className="text-orange-600 hover:text-orange-800 mb-4 flex items-center space-x-2"
-      >
-        <ArrowLeft size={18} />
-        <span>Terug naar My Recipes</span>
-      </button>
-
-      {/* Title */}
+      {/* ✅ Deze kleur zie je gegarandeerd */}
       <h1 className="text-3xl font-bold mb-2 text-orange-700">{recipe.name}</h1>
-      <p className="text-sm text-gray-500 mb-4">{recipe.category}</p>
+      <p className="text-sm text-yellow-500 mb-4">{recipe.category}</p>
 
-      {/* Preview */}
       {recipe.fileType === 'image' ? (
-        <div className="overflow-hidden rounded border">
+        <div className="w-full overflow-hidden rounded border">
           <Image
             src={recipe.fileUrl}
             alt={recipe.name}
             width={800}
             height={600}
             className="w-full h-auto object-contain"
-            style={{ touchAction: 'manipulation' }}
           />
         </div>
       ) : (
@@ -103,6 +103,14 @@ export default function RecipeDetailPage() {
           Open PDF
         </a>
       )}
+
+      <button
+        onClick={() => router.push('/dashboard')}
+        className="mt-6 text-gray-500 underline hover:text-gray-700 flex items-center space-x-2"
+      >
+        <ArrowLeft size={18} />
+        <span>Terug naar overzicht</span>
+      </button>
     </div>
   );
 }
