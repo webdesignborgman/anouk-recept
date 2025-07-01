@@ -30,6 +30,9 @@ export default function ItemDetail({ params }: { params: Promise<{ id: string }>
     async function loadItem() {
       try {
         // Haal ID-token
+        if (!user) {
+          throw new Error("User is not authenticated");
+        }
         const idToken = await user.getIdToken();
         const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!;
         const databaseName = "anouk-recept"; // jouw database-naam
