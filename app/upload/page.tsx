@@ -44,11 +44,18 @@ export default function UploadPage() {
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
 
+      const isPdf = file.type.includes('pdf');
+      // Robuuste regex: werkt ook als er querystrings aanwezig zijn in downloadURL!
+      const thumbUrl = isPdf
+        ? downloadURL.replace(/\.pdf(\?.*)?$/, '_thumb.jpg$1')
+        : downloadURL;
+
       await addDoc(collection(firestore, 'recipes'), {
         name,
         category,
         fileUrl: downloadURL,
-        fileType: file.type.includes('pdf') ? 'pdf' : 'image',
+        fileType: isPdf ? 'pdf' : 'image',
+        thumbUrl, // 🔥 hier zit nu ALTIJD de juiste jpg-url
         userId: user.uid,
         createdAt: serverTimestamp(),
       });
@@ -56,7 +63,6 @@ export default function UploadPage() {
       setToastType('success');
       setToastMessage('Recept succesvol geüpload ✅');
 
-      // Kleine delay zodat toast zichtbaar blijft voor redirect
       setTimeout(() => {
         router.push('/dashboard');
       }, 1000);
@@ -102,7 +108,9 @@ export default function UploadPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Bestand (PDF of afbeelding)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Bestand (PDF of afbeelding)
+          </label>
           <input
             type="file"
             accept="application/pdf, image/*"
@@ -120,7 +128,6 @@ export default function UploadPage() {
         </button>
       </form>
 
-      {/* Toast */}
       {toastMessage && (
         <Toast
           message={toastMessage}
