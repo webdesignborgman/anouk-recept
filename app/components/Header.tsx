@@ -17,10 +17,10 @@ export const Header = ({ user, onSignOut }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="bg-white shadow-lg border-b border-gray-100 sticky top-0 z-50">
+    <header className="bg-accent shadow-lg border-b border-gray-100 sticky top-0 z-50">
       <div className="px-4 py-3 flex justify-between items-center">
         {/* Logo */}
-        <Link href="/" className="text-xl font-bold text-orange-600">
+        <Link href="/" className="text-xl font-bold text-primary">
           Anouk's Recipes
         </Link>
 

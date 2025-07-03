@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Toast } from '../components/Toast';
 import { storage, firestore, auth } from '../../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -15,12 +16,17 @@ export default function UploadPage() {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [thumbFile, setThumbFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   const categories = ['Ontbijt', 'Lunch', 'Diner', 'Tussendoor', 'Extra informatie'];
+
+  // Bepaal of de gekozen file een PDF is
+  const isPdf =
+    (file?.type && file.type.includes('pdf')) ||
+    (file?.name && file.name.toLowerCase().endsWith('.pdf'));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,35 +43,43 @@ export default function UploadPage() {
       return;
     }
 
+    // Als het een pdf is, verplicht een thumbnail
+    if (isPdf && !thumbFile) {
+      setToastType('error');
+      setToastMessage('Selecteer een thumbnail voor je PDF.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const storageRef = ref(storage, `recipes/${user.uid}/${file.name}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
+      // 1. Upload bestand (PDF of image)
+      const fileRef = ref(storage, `recipes/${user.uid}/${file.name}`);
+      await uploadBytes(fileRef, file);
+      const fileUrl = await getDownloadURL(fileRef);
 
-      const isPdf = file.type.includes('pdf');
-      // Robuuste regex: werkt ook als er querystrings aanwezig zijn in downloadURL!
-      const thumbUrl = isPdf
-        ? downloadURL.replace(/\.pdf(\?.*)?$/, '_thumb.jpg$1')
-        : downloadURL;
+      // 2. Upload thumbnail (alleen bij PDF)
+      let thumbUrl = fileUrl;
+      if (isPdf && thumbFile) {
+        const thumbRef = ref(storage, `recipes/${user.uid}/thumbs/${thumbFile.name}`);
+        await uploadBytes(thumbRef, thumbFile);
+        thumbUrl = await getDownloadURL(thumbRef);
+      }
 
+      // 3. Opslaan in Firestore
       await addDoc(collection(firestore, 'recipes'), {
         name,
         category,
-        fileUrl: downloadURL,
+        fileUrl,
         fileType: isPdf ? 'pdf' : 'image',
-        thumbUrl, // 🔥 hier zit nu ALTIJD de juiste jpg-url
+        thumbUrl,
         userId: user.uid,
         createdAt: serverTimestamp(),
       });
 
       setToastType('success');
       setToastMessage('Recept succesvol geüpload ✅');
-
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1000);
+      setTimeout(() => router.push('/dashboard'), 1000);
     } catch (err) {
       console.error('Upload error:', err);
       setToastType('error');
@@ -114,18 +128,74 @@ export default function UploadPage() {
           <input
             type="file"
             accept="application/pdf, image/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            onChange={(e) => {
+              const selected = e.target.files?.[0] || null;
+              setFile(selected);
+              setThumbFile(null); // Reset thumb als je een nieuw bestand kiest
+            }}
             className="w-full"
           />
         </div>
 
-        <button
+        {/* Alleen tonen als er een PDF geselecteerd is */}
+        {isPdf && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Selecteer een thumbnail voor je PDF (JPG/PNG)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setThumbFile(e.target.files?.[0] || null)}
+              className="w-full"
+            />
+            {thumbFile && (
+              <div className="mt-2">
+                <img
+                  src={URL.createObjectURL(thumbFile)}
+                  alt="PDF Thumbnail Preview"
+                  className="w-32 h-32 object-cover rounded border mt-1"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Framer Motion animatie op button */}
+        <motion.button
           type="submit"
           disabled={loading}
-          className="bg-orange-600 text-white w-full py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors"
+          className="bg-orange-600 text-white w-full py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center justify-center"
+          whileTap={{ scale: 0.97 }}
+          animate={loading ? { opacity: 0.7, scale: 0.97 } : { opacity: 1, scale: 1 }}
         >
-          {loading ? 'Bezig met uploaden...' : 'Recept Uploaden'}
-        </button>
+          {loading ? (
+            <motion.span
+              className="inline-block mr-2"
+              initial={{ rotate: 0 }}
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+            >
+              {/* Spinner SVG */}
+              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                />
+              </svg>
+            </motion.span>
+          ) : null}
+          {loading ? "Bezig met uploaden..." : "Recept Uploaden"}
+        </motion.button>
       </form>
 
       {toastMessage && (
