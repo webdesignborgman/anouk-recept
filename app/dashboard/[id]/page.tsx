@@ -37,7 +37,8 @@ export default function RecipeDetailPage() {
 
     const fetchRecipe = async () => {
       try {
-        const docRef = doc(firestore, 'recipes', id) as any; // Firestore-ref typing
+        // docRef krijgt nu de correcte Firestore-typing
+        const docRef = doc(firestore, 'recipes', id);
         const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {

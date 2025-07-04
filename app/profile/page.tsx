@@ -1,9 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, FormEvent } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../../firebase';
-import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+  Timestamp,
+} from 'firebase/firestore';
 import { firestore } from '../../firebase';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
@@ -15,7 +24,7 @@ interface Recipe {
   category: string;
   fileType: 'image' | 'pdf';
   fileUrl: string;
-  createdAt: any;
+  createdAt: Timestamp;
   userId: string;
 }
 
@@ -23,16 +32,15 @@ interface MottoDoc {
   motto?: string;
 }
 
-function formatDate(isoOrTimestamp?: any): string {
-  if (!isoOrTimestamp) return '';
-  let date: Date;
-  if (typeof isoOrTimestamp === 'string') {
-    date = new Date(isoOrTimestamp);
-  } else if (typeof isoOrTimestamp.toDate === 'function') {
-    date = isoOrTimestamp.toDate();
-  } else {
-    date = new Date(isoOrTimestamp);
-  }
+// Typen: ISO-string of Firestore Timestamp
+function formatDate(value?: string | Timestamp): string {
+  if (!value) return '';
+  const date =
+    typeof value === 'string'
+      ? new Date(value)
+      : value instanceof Timestamp
+      ? value.toDate()
+      : new Date(value);
   return date.toLocaleString('nl-NL', {
     year: 'numeric',
     month: 'short',
@@ -45,12 +53,12 @@ function formatDate(isoOrTimestamp?: any): string {
 export default function ProfilePage() {
   const [user, loadingAuth] = useAuthState(auth);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [loadingRecipes, setLoadingRecipes] = useState(true);
+  const [loadingRecipes, setLoadingRecipes] = useState<boolean>(true);
   const [motto, setMotto] = useState<string>('');
   const [mottoEdit, setMottoEdit] = useState<string>('');
-  const [savingMotto, setSavingMotto] = useState(false);
-  const [mottoEditMode, setMottoEditMode] = useState(false);
-  const [loadingMotto, setLoadingMotto] = useState(true);
+  const [savingMotto, setSavingMotto] = useState<boolean>(false);
+  const [mottoEditMode, setMottoEditMode] = useState<boolean>(false);
+  const [loadingMotto, setLoadingMotto] = useState<boolean>(true);
 
   // Statistieken
   const recipeCount = recipes.length;
@@ -84,23 +92,24 @@ export default function ProfilePage() {
     if (!user) return;
     setLoadingRecipes(true);
     const fetch = async () => {
-      const q = query(collection(firestore, 'recipes'), where('userId', '==', user.uid));
+      const q = query(
+        collection(firestore, 'recipes'),
+        where('userId', '==', user.uid)
+      );
       const snap = await getDocs(q);
       setRecipes(
-        snap.docs.map(
-          (docSnap) =>
-            ({
-              id: docSnap.id,
-              ...docSnap.data(),
-            } as Recipe)
-        )
+        snap.docs.map((docSnap) => ({
+          id: docSnap.id,
+          ...docSnap.data(),
+        })) as Recipe[]
       );
       setLoadingRecipes(false);
     };
     fetch();
   }, [user]);
 
-  const handleMottoSave = async () => {
+  const handleMottoSave = async (e: FormEvent) => {
+    e.preventDefault();
     if (!user) return;
     setSavingMotto(true);
     const ref = doc(firestore, 'users', user.uid);
@@ -110,22 +119,27 @@ export default function ProfilePage() {
     setSavingMotto(false);
   };
 
-  if (loadingAuth)
+  if (loadingAuth) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="animate-spin w-12 h-12 text-primary" />
       </div>
     );
+  }
 
-  if (!user)
+  if (!user) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
         <h2 className="text-2xl font-bold text-foreground">Niet ingelogd</h2>
-        <Link href="/login" className="bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow hover:bg-primary/90 transition">
+        <Link
+          href="/login"
+          className="bg-primary text-primary-foreground px-4 py-2 rounded-xl shadow hover:bg-primary/90 transition"
+        >
           Inloggen
         </Link>
       </div>
     );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center py-8">
@@ -142,7 +156,7 @@ export default function ProfilePage() {
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.2, duration: 0.4, type: 'spring', stiffness: 200 }}
         >
-          <div className="w-28 h-28 rounded-full shadow-md bg-accent flex items-center justify-center mb-2 border-4 border-background relative overflow-hidden">
+          <div className="w-28 h-28 rounded-full shadow-md bg-accent border-4 border-background overflow-hidden flex items-center justify-center mb-2">
             {user.photoURL ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -154,7 +168,9 @@ export default function ProfilePage() {
               <User size={48} className="text-primary" />
             )}
           </div>
-          <h1 className="text-2xl font-bold text-foreground">{user.displayName || 'Gebruiker'}</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            {user.displayName || 'Gebruiker'}
+          </h1>
           <p className="text-muted-foreground text-sm">{user.email}</p>
         </motion.div>
 
@@ -168,18 +184,25 @@ export default function ProfilePage() {
             transition={{ delay: 0.35, duration: 0.5 }}
           >
             <div className="bg-muted rounded-xl shadow-soft px-6 py-4 flex flex-col items-center">
-              <span className="text-3xl font-extrabold text-primary">{loadingRecipes ? <Loader2 className="animate-spin" /> : recipeCount}</span>
+              <span className="text-3xl font-extrabold text-primary">
+                {loadingRecipes ? <Loader2 className="animate-spin" /> : recipeCount}
+              </span>
               <span className="text-muted-foreground text-xs">Recepten opgeslagen</span>
             </div>
             <div className="bg-muted rounded-xl shadow-soft px-6 py-4 flex flex-col items-center">
-              <span className="text-lg font-semibold text-foreground">{loadingRecipes ? <Loader2 className="animate-spin" /> : mostUsedCategory}</span>
+              <span className="text-lg font-semibold text-foreground">
+                {loadingRecipes ? <Loader2 className="animate-spin" /> : mostUsedCategory}
+              </span>
               <span className="text-muted-foreground text-xs">Meest gebruikt</span>
             </div>
             <div className="bg-muted rounded-xl shadow-soft px-6 py-4 flex flex-col items-center">
-              <span className="text-lg font-semibold text-foreground">{loadingRecipes ? <Loader2 className="animate-spin" /> : totalUploads}</span>
+              <span className="text-lg font-semibold text-foreground">
+                {loadingRecipes ? <Loader2 className="animate-spin" /> : totalUploads}
+              </span>
               <span className="text-muted-foreground text-xs">Totaal uploads</span>
             </div>
           </motion.div>
+
           {/* Quote + metadata */}
           <motion.div
             className="flex flex-col gap-4 justify-between"
@@ -188,21 +211,15 @@ export default function ProfilePage() {
             transition={{ delay: 0.4, duration: 0.5 }}
           >
             {/* Motto */}
-            <div className="bg-accent rounded-xl p-4 shadow-soft flex flex-col items-center justify-center text-center">
+            <div className="bg-accent rounded-xl p-4 shadow-soft flex flex-col items-center text-center">
               {loadingMotto ? (
                 <Loader2 className="animate-spin mx-auto text-primary" />
               ) : mottoEditMode ? (
-                <form
-                  className="flex flex-col items-center gap-3 w-full"
-                  onSubmit={e => {
-                    e.preventDefault();
-                    handleMottoSave();
-                  }}
-                >
+                <form onSubmit={handleMottoSave} className="flex flex-col items-center gap-3 w-full">
                   <input
                     className="w-full px-3 py-2 rounded-xl border border-border bg-card text-foreground shadow focus:outline-none"
                     value={mottoEdit}
-                    onChange={e => setMottoEdit(e.target.value)}
+                    onChange={(e) => setMottoEdit(e.target.value)}
                     maxLength={100}
                     placeholder="Jouw receptenmotto..."
                     autoFocus
@@ -230,7 +247,9 @@ export default function ProfilePage() {
                 </form>
               ) : (
                 <>
-                  <span className="italic text-primary text-lg leading-relaxed">{`"${motto}"`}</span>
+                  <span className="italic text-primary text-lg leading-relaxed">
+                    {`"${motto}"`}
+                  </span>
                   <button
                     className="mt-2 text-xs text-muted-foreground hover:underline"
                     onClick={() => setMottoEditMode(true)}
@@ -243,15 +262,11 @@ export default function ProfilePage() {
             <div className="flex flex-col items-center gap-1 mt-2">
               <span className="text-xs text-muted-foreground">
                 Lid sinds:{' '}
-                <span className="font-medium">
-                  {formatDate(user.metadata?.creationTime)}
-                </span>
+                <span className="font-medium">{formatDate(user.metadata?.creationTime)}</span>
               </span>
               <span className="text-xs text-muted-foreground">
                 Laatste login:{' '}
-                <span className="font-medium">
-                  {formatDate(user.metadata?.lastSignInTime)}
-                </span>
+                <span className="font-medium">{formatDate(user.metadata?.lastSignInTime)}</span>
               </span>
             </div>
           </motion.div>
