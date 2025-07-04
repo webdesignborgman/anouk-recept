@@ -1,5 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    // Voeg extra paden toe als je elders ook componenten/pages hebt
+  ],
   theme: {
     extend: {
       colors: {

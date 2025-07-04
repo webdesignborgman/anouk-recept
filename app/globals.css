@@ -28,3 +28,16 @@
   --background-image-secondary: linear-gradient(135deg, var(--color-secondary), var(--color-accent));
   --background-image-accent: linear-gradient(180deg, var(--color-card), var(--color-background));
 }
+
+@layer utilities {
+  .bg-gradient-primary {
+    background-image: var(--background-image-primary);
+  }
+  .bg-gradient-secondary {
+    background-image: var(--background-image-secondary);
+  }
+  .bg-gradient-accent {
+    background-image: var(--background-image-accent);
+  }
+}
+

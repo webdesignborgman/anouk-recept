@@ -1,0 +1,46 @@
+{
+  "Pastel Card": {
+    "prefix": "pastelcard",
+    "body": [
+      "<div className=\"bg-card text-card-foreground rounded-lg shadow-soft p-6\">",
+      "  <h2 className=\"text-primary text-2xl font-bold mb-2\">${1:Receptnaam}</h2>",
+      "  <p className=\"text-muted-foreground mb-4\">${2:Korte omschrijving}</p>",
+      "  <button className=\"bg-gradient-primary text-primary-foreground px-4 py-2 rounded-lg shadow-medium\">",
+      "    ${3:Voeg toe}",
+      "  </button>",
+      "</div>"
+    ],
+    "description": "Snelle pastel-receptkaart"
+  },
+  "Pastel Gradient Button": {
+    "prefix": "pastelbtn",
+    "body": [
+      "<button className=\"bg-gradient-primary text-primary-foreground rounded-lg px-6 py-3 shadow-soft\">",
+      "  ${1:Button tekst}",
+      "</button>"
+    ],
+    "description": "Mooie gradient button"
+  },
+  "Pastel Feature Box": {
+    "prefix": "pastelfeature",
+    "body": [
+      "<div className=\"bg-gradient-accent rounded-lg shadow-soft p-4 flex flex-col items-center\">",
+      "  <span className=\"text-2xl mb-2\">${1:🍽️}</span>",
+      "  <h3 className=\"text-primary text-lg font-bold mb-1\">${2:Feature titel}</h3>",
+      "  <p className=\"text-muted-foreground text-sm text-center\">${3:Uitleg van de feature}</p>",
+      "</div>"
+    ],
+    "description": "Box met pastel gradient voor features/highlights"
+  },
+  "Pastel Section": {
+    "prefix": "pastelsection",
+    "body": [
+      "<section className=\"bg-gradient-secondary py-16 rounded-2xl shadow-medium mb-8\">",
+      "  <div className=\"container mx-auto px-4\">",
+      "    ${1:<!-- Content hier -->}",
+      "  </div>",
+      "</section>"
+    ],
+    "description": "Pastel gradient section met padding en shadow"
+  }
+}

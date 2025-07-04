@@ -1,26 +1,48 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthState } from "react-firebase-hooks/auth";
 import { signInWithPopup, GoogleAuthProvider } from "firebase/auth";
-import { auth } from "../../firebase"; // <-- eventueel pad aanpassen!
-import { useState } from "react";
+import { auth } from "../../firebase";
 import { motion } from "framer-motion";
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
+  const [user, loading] = useAuthState(auth);
+  const [loginLoading, setLoginLoading] = useState(false);
   const [error, setError] = useState("");
+  const router = useRouter();
+
+  // Redirect als je al ingelogd bent
+  useEffect(() => {
+    if (loading) return;
+    if (user) {
+      router.replace("/dashboard");
+    }
+  }, [user, loading, router]);
 
   const handleGoogleLogin = async () => {
     try {
       setError("");
-      setLoading(true);
+      setLoginLoading(true);
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
+      // router.replace volgt vanzelf door de effect hierboven
     } catch (e) {
       setError("Inloggen mislukt. Probeer het opnieuw.");
     } finally {
-      setLoading(false);
+      setLoginLoading(false);
     }
   };
+
+  // Laat niks zien als al ingelogd (router.replace gaat supersnel)
+  if (user || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-accent">
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-accent overflow-hidden px-4">
@@ -49,9 +71,9 @@ export default function LoginPage() {
         <button
           onClick={handleGoogleLogin}
           className={`flex items-center justify-center gap-3 px-6 py-4 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition text-lg font-medium shadow-soft min-w-[220px] ${
-            loading ? "opacity-80 pointer-events-none" : ""
+            loginLoading ? "opacity-80 pointer-events-none" : ""
           }`}
-          disabled={loading}
+          disabled={loginLoading}
         >
           <svg width="24" height="24" viewBox="0 0 48 48" fill="none">
             <g>
@@ -61,7 +83,7 @@ export default function LoginPage() {
               <path fill="#EA4335" d="M43.6 20.5h-1.8V20H24v8h11.2c-0.7 1.9-2.1 3.5-3.7 4.6h.1l6 4.9c1.7-1.5 3-3.7 3.8-6.2.5-1.4.8-2.9.8-4.4 0-.7-.1-1.4-.2-2.1z"/>
             </g>
           </svg>
-          {loading ? (
+          {loginLoading ? (
             <span className="flex items-center gap-2">
               <Spinner />
               Bezig...
@@ -104,6 +126,7 @@ function AnimatedBackground() {
   );
 }
 
+// Je boek illustratie (of een andere SVG als gewenst!)
 function KitchenIllustration() {
   return (
     <svg width="96" height="96" viewBox="0 0 96 96" fill="none">
@@ -130,13 +153,11 @@ function KitchenIllustration() {
   );
 }
 
-
-
 // Spinner
 function Spinner() {
   return (
     <svg
-      className="animate-spin h-5 w-5 text-primary-foreground"
+      className="animate-spin h-8 w-8 text-primary"
       viewBox="0 0 24 24"
       fill="none"
     >
