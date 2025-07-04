@@ -21,7 +21,7 @@ export default function UploadPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
-  const categories = ['Ontbijt', 'Lunch', 'Diner', 'Tussendoor', 'Extra informatie'];
+  const categories = ['Ontbijt', 'Lunch', 'Diner', 'Snack', 'Bakje Geluk', 'Baksels', 'Info & Tips'];
 
   // Bepaal of de gekozen file een PDF is
   const isPdf =

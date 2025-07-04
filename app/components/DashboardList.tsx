@@ -25,6 +25,17 @@ interface DashboardListProps {
   onEdit?: (item: DashboardItem) => void;
 }
 
+// VASTE CATEGORIEEN:
+const categories = [
+  'Ontbijt',
+  'Lunch',
+  'Diner',
+  'Snack',
+  'Bakje Geluk',
+  'Baksels',
+  'Info & Tips'
+];
+
 export default function DashboardList({
   items,
   onDelete,
@@ -46,10 +57,6 @@ export default function DashboardList({
   const handleCategoryChange = (e: ChangeEvent<HTMLSelectElement>) => {
     setSelectedCategory(e.target.value);
   };
-
-  const categories = Array.from(
-    new Set(items.map((item) => item.category).filter(Boolean))
-  );
 
   const filteredItems = items.filter((item) => {
     const lower = searchQuery.toLowerCase();
@@ -102,20 +109,18 @@ export default function DashboardList({
         className="w-full p-2 mb-4 border rounded shadow-sm text-black"
       />
 
-      {categories.length > 0 && (
-        <select
-          value={selectedCategory}
-          onChange={handleCategoryChange}
-          className="w-full p-2 mb-4 border rounded shadow-sm bg-white text-black"
-        >
-          <option value="">Alle categorieën</option>
-          {categories.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
-          ))}
-        </select>
-      )}
+      <select
+        value={selectedCategory}
+        onChange={handleCategoryChange}
+        className="w-full p-2 mb-4 border rounded shadow-sm bg-white text-black"
+      >
+        <option value="">Alle categorieën</option>
+        {categories.map((category) => (
+          <option key={category} value={category}>
+            {category}
+          </option>
+        ))}
+      </select>
 
       {filteredItems.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -171,8 +176,6 @@ export default function DashboardList({
                     <div className="mt-2 flex justify-end gap-2">
                       <Button
                         type="button"
-                        variant="outline"
-                        size="sm"
                         aria-label="Bewerken"
                         className="p-2 rounded-full bg-orange-100/70 text-orange-600 hover:bg-orange-200 shadow border border-orange-200 transition"
                         onClick={() => handleEditClick(item)}
@@ -181,8 +184,6 @@ export default function DashboardList({
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
-                        size="sm"
                         aria-label="Verwijderen"
                         className="p-2 rounded-full bg-red-100/70 text-red-600 hover:bg-red-200 shadow border border-red-200 transition"
                         onClick={() => onDelete(item.id, item.fileUrl)}
@@ -211,7 +212,7 @@ export default function DashboardList({
                         disabled={loadingSave}
                       >
                         <option value="">Categorie kiezen...</option>
-                        {[...new Set(items.map((i) => i.category).filter(Boolean))].map((cat) => (
+                        {categories.map((cat) => (
                           <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
@@ -219,8 +220,6 @@ export default function DashboardList({
                     <div className="mt-2 flex justify-end gap-2">
                       <Button
                         type="button"
-                        variant="outline"
-                        size="sm"
                         aria-label="Annuleren"
                         className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 shadow border transition"
                         onClick={handleEditCancel}
@@ -230,8 +229,6 @@ export default function DashboardList({
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
-                        size="sm"
                         aria-label="Opslaan"
                         className="p-2 rounded-full bg-green-100 text-green-700 hover:bg-green-200 shadow border transition"
                         onClick={() => handleEditSave(item)}

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { User, Menu, X, LogOut, ChevronDown, Plus, BookOpen, ChefHat } from 'lucide-react';
+import { User, Menu, X, LogOut, ChevronDown, ChefHat } from 'lucide-react';
 
 interface HeaderProps {
   user?: {
@@ -35,53 +35,91 @@ export const Header = ({ user, onSignOut }: HeaderProps) => {
   }, [isDropdownOpen]);
 
   return (
-    <header className="bg-accent shadow-lg border-b border-gray-100 sticky top-0 z-50">
+    <header className="bg-accent shadow-lg border-b border-border sticky top-0 z-50">
       <div className="px-4 py-3 flex justify-between items-center">
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2 text-xl font-bold text-primary">
-          {/* Kies het icoon dat je wilt: ChefHat of BookOpen */}
-          <ChefHat size={28} className="text-orange-500" />
-          {/* <BookOpen size={26} className="text-orange-500" /> */}
+          <ChefHat size={28} className="text-primary" />
           <span>Anouk&apos;s recepten</span>
         </Link>
 
-        {/* Desktop Menu */}
-        <nav className="hidden md:flex items-center space-x-6">
-          <Link href="/dashboard" className="text-gray-700 hover:text-orange-600 transition-colors">
+        {/* Mobile: userinfo + hamburger */}
+        <div className="flex items-center space-x-3 md:hidden">
+          {user ? (
+            <div className="flex items-center space-x-2">
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover border border-border"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center border border-border">
+                  <User size={16} className="text-primary" />
+                </div>
+              )}
+              <span className="text-sm text-foreground max-w-[120px] truncate">
+                {user.displayName || user.email}
+              </span>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="text-sm bg-primary text-primary-foreground px-3 py-1 rounded shadow-sm hover:bg-primary/90 transition-colors"
+            >
+              Login
+            </Link>
+          )}
+
+          {/* Hamburger menu button */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="text-foreground hover:text-primary p-2"
+            aria-label="Menu openen"
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+
+        {/* Desktop/tablet: navigatie en user dropdown helemaal rechts */}
+        <div className="hidden md:flex flex-1 items-center justify-end space-x-6">
+          <Link href="/dashboard" className="text-foreground hover:text-primary transition-colors">
             Mijn recepten
           </Link>
           {user && (
-            <Link href="/upload" className="text-gray-700 hover:text-orange-600 transition-colors">
+            <Link href="/upload" className="text-foreground hover:text-primary transition-colors">
               Recept uploaden
             </Link>
           )}
 
-          {/* User Dropdown */}
+          {/* Gebruiker dropdown helemaal rechts */}
           {user ? (
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen((v) => !v)}
-                className="flex items-center space-x-2 group focus:outline-none"
+                className="flex items-center space-x-2 group focus:outline-none px-3 py-1 rounded-xl hover:bg-card transition shadow-soft"
               >
                 {user.photoURL ? (
                   <img
                     src={user.photoURL}
                     alt="Profile"
-                    className="w-8 h-8 rounded-full object-cover border border-gray-300"
+                    className="w-8 h-8 rounded-full object-cover border border-border"
                   />
                 ) : (
-                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                    <User size={16} className="text-orange-600" />
+                  <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center border border-border">
+                    <User size={16} className="text-primary" />
                   </div>
                 )}
-                <span className="text-sm text-gray-700">{user.displayName || user.email}</span>
-                <ChevronDown size={18} className={`transition-transform ${isDropdownOpen ? "rotate-180" : ""} text-gray-500`} />
+                <span className="text-sm text-foreground max-w-[120px] truncate">
+                  {user.displayName || user.email}
+                </span>
+                <ChevronDown size={18} className={`transition-transform ${isDropdownOpen ? "rotate-180" : ""} text-muted-foreground`} />
               </button>
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-lg py-2 z-50">
+                <div className="absolute right-0 mt-2 w-44 bg-card border border-border rounded-xl shadow-lg py-2 z-50 animate-fadeIn">
                   <Link
                     href="/profile"
-                    className="block px-4 py-2 text-gray-700 hover:bg-orange-50 hover:text-orange-700 transition"
+                    className="block px-4 py-2 text-foreground hover:bg-accent hover:text-primary transition rounded"
                     onClick={() => setIsDropdownOpen(false)}
                   >
                     Profiel
@@ -91,7 +129,7 @@ export const Header = ({ user, onSignOut }: HeaderProps) => {
                       onSignOut();
                       setIsDropdownOpen(false);
                     }}
-                    className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-700 transition flex items-center space-x-2"
+                    className="block w-full text-left px-4 py-2 text-destructive hover:bg-destructive hover:text-destructive-foreground transition rounded flex items-center space-x-2"
                   >
                     <LogOut size={16} />
                     <span>Uitloggen</span>
@@ -100,67 +138,38 @@ export const Header = ({ user, onSignOut }: HeaderProps) => {
               )}
             </div>
           ) : (
-            <span className="text-sm text-gray-500">Niet ingelogd</span>
-          )}
-        </nav>
-
-        {/* Mobile Actions */}
-        <div className="md:hidden flex items-center space-x-3">
-          {user && (
             <Link
-              href="/upload"
-              className="bg-orange-600 text-white p-2 rounded-full hover:bg-orange-700 transition-colors"
+              href="/login"
+              className="text-sm bg-primary text-primary-foreground px-3 py-1 rounded shadow-sm hover:bg-primary/90 transition-colors"
             >
-              <Plus size={20} />
+              Login
             </Link>
           )}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="text-gray-700 hover:text-orange-600 p-2"
-          >
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
         </div>
       </div>
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden mt-2 border-t border-gray-100 px-4 pb-4 space-y-3">
+        <div className="md:hidden mt-2 border-t border-border px-4 pb-4 space-y-3 bg-background rounded-b-xl shadow-soft">
           <Link
             href="/dashboard"
-            className="block py-2 text-gray-700 hover:text-orange-600 transition-colors"
+            className="block py-2 text-foreground hover:text-primary transition-colors"
             onClick={() => setIsMenuOpen(false)}
           >
             Mijn recepten
           </Link>
           <Link
             href="/upload"
-            className="block py-2 text-gray-700 hover:text-orange-600 transition-colors"
+            className="block py-2 text-foreground hover:text-primary transition-colors"
             onClick={() => setIsMenuOpen(false)}
           >
             Recept uploaden
           </Link>
-
           {user && (
             <>
-              <div className="flex items-center space-x-3 py-2">
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full" />
-                ) : (
-                  <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                    <User size={20} className="text-orange-600" />
-                  </div>
-                )}
-                <div>
-                  <p className="font-medium text-gray-900">{user.displayName || 'User'}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
-                </div>
-              </div>
-
-              {/* Profiel en Uitloggen als submenu */}
               <Link
                 href="/profile"
-                className="block py-2 text-gray-700 hover:text-orange-600 transition-colors"
+                className="block py-2 text-foreground hover:text-primary transition-colors"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Profiel
@@ -170,12 +179,21 @@ export const Header = ({ user, onSignOut }: HeaderProps) => {
                   onSignOut();
                   setIsMenuOpen(false);
                 }}
-                className="w-full text-left py-2 text-red-600 hover:text-red-800 transition-colors flex items-center space-x-2"
+                className="w-full text-left py-2 text-destructive hover:bg-destructive hover:text-destructive-foreground transition rounded flex items-center space-x-2"
               >
                 <LogOut size={20} />
                 <span>Uitloggen</span>
               </button>
             </>
+          )}
+          {!user && (
+            <Link
+              href="/login"
+              className="block py-2 text-primary hover:bg-primary/10 hover:text-primary-foreground rounded transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Login
+            </Link>
           )}
         </div>
       )}
