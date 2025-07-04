@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { auth, firestore } from '../../../firebase';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import Image from 'next/image';
 import { ArrowLeft } from 'lucide-react';
 
@@ -14,13 +14,13 @@ interface Recipe {
   category: string;
   fileType: 'pdf' | 'image';
   fileUrl: string;
-  createdAt: any;
+  createdAt: Timestamp;
   userId: string;
   tags?: string[];
 }
 
 export default function RecipeDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams() as { id: string };
   const router = useRouter();
   const [user, loading] = useAuthState(auth);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -37,7 +37,7 @@ export default function RecipeDetailPage() {
 
     const fetchRecipe = async () => {
       try {
-        const docRef = doc(firestore, 'recipes', id);
+        const docRef = doc(firestore, 'recipes', id) as any; // Firestore-ref typing
         const docSnap = await getDoc(docRef);
 
         if (!docSnap.exists()) {
@@ -47,15 +47,14 @@ export default function RecipeDetailPage() {
 
         const data = docSnap.data() as Omit<Recipe, 'id'>;
 
-        // Check of het recept van de ingelogde gebruiker is
         if (data.userId !== user.uid) {
           setError('Geen toegang tot dit recept.');
           return;
         }
 
         setRecipe({ id: docSnap.id, ...data });
-      } catch (err) {
-        console.error('Fout bij ophalen recept:', err);
+      } catch (fetchError) {
+        console.error(fetchError);
         setError('Er ging iets mis bij het laden van het recept.');
       } finally {
         setFetching(false);
@@ -66,11 +65,11 @@ export default function RecipeDetailPage() {
   }, [id, user, loading, router]);
 
   if (loading || fetching) {
-    return <div className="p-4">Laden...</div>;
+    return <div className="p-4 text-muted-foreground">Laden...</div>;
   }
 
   if (error) {
-    return <div className="p-4 text-red-600">{error}</div>;
+    return <div className="p-4 text-destructive">{error}</div>;
   }
 
   if (!recipe) {
@@ -78,19 +77,18 @@ export default function RecipeDetailPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto mt-8 bg-white p-6 rounded-lg shadow-lg">
-      {/* ✅ Deze kleur zie je gegarandeerd */}
-      <h1 className="text-3xl font-bold mb-2 text-orange-700">{recipe.name}</h1>
-      <p className="text-sm text-yellow-500 mb-4">{recipe.category}</p>
+    <div className="max-w-2xl mx-auto mt-8 bg-card p-6 rounded-xl shadow-soft">
+      <h1 className="text-3xl font-bold mb-2 text-primary-foreground">{recipe.name}</h1>
+      <p className="text-sm text-muted-foreground mb-4">{recipe.category}</p>
 
       {recipe.fileType === 'image' ? (
-        <div className="w-full overflow-hidden rounded border">
+        <div className="w-full overflow-hidden rounded-xl border border-border mb-6 relative h-[400px]">
           <Image
             src={recipe.fileUrl}
             alt={recipe.name}
-            width={800}
-            height={600}
-            className="w-full h-auto object-contain"
+            fill
+            className="object-contain"
+            sizes="(max-width: 640px) 100vw, 800px"
           />
         </div>
       ) : (
@@ -98,7 +96,7 @@ export default function RecipeDetailPage() {
           href={recipe.fileUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+          className="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition mb-6"
         >
           Open PDF
         </a>
@@ -106,7 +104,7 @@ export default function RecipeDetailPage() {
 
       <button
         onClick={() => router.push('/dashboard')}
-        className="mt-6 text-gray-500 underline hover:text-gray-700 flex items-center space-x-2"
+        className="text-sm text-muted-foreground underline hover:text-foreground flex items-center space-x-2"
       >
         <ArrowLeft size={18} />
         <span>Terug naar overzicht</span>

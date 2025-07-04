@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, ChangeEvent } from 'react';
+import Image from 'next/image';
 import { Button } from '../components/ui/button';
 import { Pencil, Trash2, X, Check, Loader } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { firestore } from '../../firebase';
 import { Toast } from './Toast';
 
@@ -14,7 +15,7 @@ export interface DashboardItem {
   fileType: 'pdf' | 'image';
   fileUrl: string;
   thumbUrl?: string;
-  createdAt: any;
+  createdAt: Timestamp;
   userId: string;
   tags?: string[];
 }
@@ -25,7 +26,7 @@ interface DashboardListProps {
   onEdit?: (item: DashboardItem) => void;
 }
 
-// VASTE CATEGORIEEN:
+// VASTE CATEGORIEËN:
 const categories = [
   'Ontbijt',
   'Lunch',
@@ -63,15 +64,13 @@ export default function DashboardList({
     const matchesSearch =
       item.name.toLowerCase().includes(lower) ||
       item.tags?.some((tag) => tag.toLowerCase().includes(lower));
-    const matchesCategory = selectedCategory
-      ? item.category === selectedCategory
-      : true;
+    const matchesCategory = selectedCategory ? item.category === selectedCategory : true;
     return matchesSearch && matchesCategory;
   });
 
   const handleEditClick = (item: DashboardItem) => {
     setEditingId(item.id);
-    setEditValues({ name: item.name, category: item.category || '' });
+    setEditValues({ name: item.name, category: item.category });
   };
 
   const handleEditChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -92,7 +91,7 @@ export default function DashboardList({
       });
       setToast({ message: 'Recept bijgewerkt ✅', type: 'success' });
       setEditingId(null);
-    } catch (err) {
+    } catch {
       setToast({ message: 'Fout bij opslaan ❌', type: 'error' });
     } finally {
       setLoadingSave(false);
@@ -141,14 +140,17 @@ export default function DashboardList({
                   rel="noopener noreferrer"
                   className="block mb-2 rounded-xl overflow-hidden bg-accent"
                 >
-                  <img
-                    src={previewUrl}
-                    alt={item.name}
-                    className="w-full h-32 object-cover rounded-xl"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
+                  <div className="relative w-full h-32">
+                    <Image
+                      src={previewUrl}
+                      alt={item.name}
+                      fill
+                      className="object-cover rounded-xl"
+                      onError={({ currentTarget }) => {
+                        currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
                 </a>
 
                 {/* Info of edit-form */}
