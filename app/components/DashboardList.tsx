@@ -33,7 +33,7 @@ const categories = [
   'Snack',
   'Bakje Geluk',
   'Baksels',
-  'Info & Tips'
+  'Info & Tips',
 ];
 
 export default function DashboardList({
@@ -106,13 +106,13 @@ export default function DashboardList({
         placeholder="Zoeken op naam of tags..."
         value={searchQuery}
         onChange={handleSearchChange}
-        className="w-full p-2 mb-4 border rounded shadow-sm text-black"
+        className="w-full p-3 mb-4 border border-border rounded-xl shadow-sm bg-card text-foreground placeholder:text-muted-foreground focus:outline-primary"
       />
 
       <select
         value={selectedCategory}
         onChange={handleCategoryChange}
-        className="w-full p-2 mb-4 border rounded shadow-sm bg-white text-black"
+        className="w-full p-3 mb-4 border border-border rounded-xl shadow-sm bg-card text-foreground focus:outline-primary"
       >
         <option value="">Alle categorieën</option>
         {categories.map((category) => (
@@ -132,19 +132,19 @@ export default function DashboardList({
             return (
               <div
                 key={item.id}
-                className="p-4 bg-white rounded-xl shadow-md flex flex-col justify-between"
+                className="p-4 bg-card rounded-xl shadow-soft flex flex-col justify-between border border-border"
               >
                 {/* Klikbare preview */}
                 <a
                   href={item.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block mb-2 rounded overflow-hidden"
+                  className="block mb-2 rounded-xl overflow-hidden bg-accent"
                 >
                   <img
                     src={previewUrl}
                     alt={item.name}
-                    className="w-full h-32 object-cover rounded bg-orange-100"
+                    className="w-full h-32 object-cover rounded-xl"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none';
                     }}
@@ -155,7 +155,7 @@ export default function DashboardList({
                 {!isEditing ? (
                   <>
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                      <h2 className="text-lg font-semibold text-primary-foreground mb-1">
                         <a
                           href={item.fileUrl}
                           target="_blank"
@@ -165,9 +165,11 @@ export default function DashboardList({
                           {item.name}
                         </a>
                       </h2>
-                      <p className="text-sm text-gray-500">Categorie: {item.category}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Categorie: {item.category}
+                      </p>
                       {item.tags && (
-                        <div className="mt-1 text-xs text-gray-400">
+                        <div className="mt-1 text-xs text-muted-foreground">
                           Tags: {item.tags.join(', ')}
                         </div>
                       )}
@@ -177,7 +179,7 @@ export default function DashboardList({
                       <Button
                         type="button"
                         aria-label="Bewerken"
-                        className="p-2 rounded-full bg-orange-100/70 text-orange-600 hover:bg-orange-200 shadow border border-orange-200 transition"
+                        className="p-2 rounded-full bg-accent text-primary hover:bg-primary/10 shadow border border-border transition"
                         onClick={() => handleEditClick(item)}
                       >
                         <Pencil className="w-5 h-5" />
@@ -185,7 +187,7 @@ export default function DashboardList({
                       <Button
                         type="button"
                         aria-label="Verwijderen"
-                        className="p-2 rounded-full bg-red-100/70 text-red-600 hover:bg-red-200 shadow border border-red-200 transition"
+                        className="p-2 rounded-full bg-destructive/20 text-destructive hover:bg-destructive/40 shadow border border-destructive/30 transition"
                         onClick={() => onDelete(item.id, item.fileUrl)}
                       >
                         <Trash2 className="w-5 h-5" />
@@ -200,7 +202,7 @@ export default function DashboardList({
                         name="name"
                         value={editValues.name}
                         onChange={handleEditChange}
-                        className="w-full mb-2 p-2 border rounded text-black"
+                        className="w-full mb-2 p-2 border border-border rounded-xl text-foreground bg-card placeholder:text-muted-foreground focus:outline-primary"
                         placeholder="Titel"
                         disabled={loadingSave}
                       />
@@ -208,12 +210,14 @@ export default function DashboardList({
                         name="category"
                         value={editValues.category}
                         onChange={handleEditChange}
-                        className="w-full p-2 border rounded text-black bg-white"
+                        className="w-full p-2 border border-border rounded-xl text-foreground bg-card focus:outline-primary"
                         disabled={loadingSave}
                       >
                         <option value="">Categorie kiezen...</option>
                         {categories.map((cat) => (
-                          <option key={cat} value={cat}>{cat}</option>
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -221,7 +225,7 @@ export default function DashboardList({
                       <Button
                         type="button"
                         aria-label="Annuleren"
-                        className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 shadow border transition"
+                        className="p-2 rounded-full bg-muted text-muted-foreground hover:bg-card shadow border border-border transition"
                         onClick={handleEditCancel}
                         disabled={loadingSave}
                       >
@@ -230,7 +234,7 @@ export default function DashboardList({
                       <Button
                         type="button"
                         aria-label="Opslaan"
-                        className="p-2 rounded-full bg-green-100 text-green-700 hover:bg-green-200 shadow border transition"
+                        className="p-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 shadow border border-primary transition"
                         onClick={() => handleEditSave(item)}
                         disabled={loadingSave}
                       >
@@ -248,9 +252,9 @@ export default function DashboardList({
           })}
         </div>
       ) : searchQuery || selectedCategory ? (
-        <p className="text-gray-500">Geen resultaten gevonden.</p>
+        <p className="text-muted-foreground">Geen resultaten gevonden.</p>
       ) : (
-        <p className="text-gray-500">Je hebt nog geen recepten.</p>
+        <p className="text-muted-foreground">Je hebt nog geen recepten.</p>
       )}
 
       {toast && (
