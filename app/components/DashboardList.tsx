@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, ChangeEvent } from 'react';
+import { useState, useRef, useEffect, ChangeEvent } from 'react';
 import Image from 'next/image';
 import { Button } from '../components/ui/button';
-import { Pencil, Trash2, X, Check, Loader } from 'lucide-react';
+import { Pencil, Trash2, X, Check, Loader, ChevronDown } from 'lucide-react';
 import { doc, updateDoc, Timestamp } from 'firebase/firestore';
 import { firestore } from '../../firebase';
 import { Toast } from './Toast';
@@ -11,7 +11,7 @@ import { Toast } from './Toast';
 export interface DashboardItem {
   id: string;
   name: string;
-  category: string;
+  categories: string[];
   fileType: 'pdf' | 'image';
   fileUrl: string;
   thumbUrl?: string;
@@ -26,7 +26,6 @@ interface DashboardListProps {
   onEdit?: (item: DashboardItem) => void;
 }
 
-// VASTE CATEGORIEËN:
 const categories = [
   'Ontbijt',
   'Lunch',
@@ -37,44 +36,132 @@ const categories = [
   'Info & Tips',
 ];
 
+// Multi-select dropdown (herbruikbaar)
+function MultiSelectDropdown({
+  selected,
+  setSelected,
+  disabled = false,
+  placeholder = 'Kies categorieën...',
+}: {
+  selected: string[];
+  setSelected: (cats: string[]) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    if (open) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full p-2 border border-border bg-card rounded-xl text-left focus:outline-primary flex flex-wrap min-h-[44px] transition ${
+          open ? 'ring-2 ring-primary' : ''
+        }`}
+      >
+        {selected.length === 0 ? (
+          <span className="text-muted-foreground">{placeholder}</span>
+        ) : (
+          <>
+            {selected.map((cat) => (
+              <span
+                key={cat}
+                className="bg-primary/10 text-primary-foreground px-2 py-1 mr-2 mb-1 rounded-lg text-xs font-medium"
+              >
+                {cat}
+              </span>
+            ))}
+          </>
+        )}
+        <ChevronDown className="ml-auto text-muted-foreground" size={18} />
+      </button>
+      {open && (
+        <div className="absolute z-20 bg-card border border-border rounded-xl mt-2 w-full shadow-soft max-h-60 overflow-auto">
+          {categories.map((cat) => (
+            <label
+              key={cat}
+              className="flex items-center px-4 py-2 cursor-pointer hover:bg-accent transition"
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(cat)}
+                onChange={() => {
+                  setSelected(
+                    selected.includes(cat)
+                      ? selected.filter((c) => c !== cat)
+                      : [...selected, cat]
+                  );
+                }}
+                className="mr-2 accent-primary"
+                disabled={disabled}
+              />
+              <span className="text-foreground">{cat}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardList({
   items,
   onDelete,
 }: DashboardListProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValues, setEditValues] = useState<{ name: string; category: string }>({
+  const [editValues, setEditValues] = useState<{ name: string; categories: string[] }>({
     name: '',
-    category: '',
+    categories: [],
   });
   const [loadingSave, setLoadingSave] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
-
-  const handleCategoryChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCategory(e.target.value);
-  };
-
+  // Filtering logica
   const filteredItems = items.filter((item) => {
     const lower = searchQuery.toLowerCase();
     const matchesSearch =
       item.name.toLowerCase().includes(lower) ||
       item.tags?.some((tag) => tag.toLowerCase().includes(lower));
-    const matchesCategory = selectedCategory ? item.category === selectedCategory : true;
+    const matchesCategory =
+      selectedCategories.length === 0
+        ? true
+        : (Array.isArray(item.categories) ? item.categories : []).some((cat) =>
+            selectedCategories.includes(cat)
+          );
     return matchesSearch && matchesCategory;
   });
 
-  const handleEditClick = (item: DashboardItem) => {
-    setEditingId(item.id);
-    setEditValues({ name: item.name, category: item.category });
+  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
   };
 
-  const handleEditChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setEditValues((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  // Edit handlers
+  const handleEditClick = (item: DashboardItem) => {
+    setEditingId(item.id);
+    setEditValues({ name: item.name, categories: item.categories ?? [] });
+  };
+
+  const handleEditNameChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setEditValues((prev) => ({ ...prev, name: e.target.value }));
+  };
+
+  const handleEditCategories = (cats: string[]) => {
+    setEditValues((prev) => ({
+      ...prev,
+      categories: cats,
+    }));
   };
 
   const handleEditCancel = () => {
@@ -87,7 +174,7 @@ export default function DashboardList({
       const ref = doc(firestore, 'recipes', item.id);
       await updateDoc(ref, {
         name: editValues.name,
-        category: editValues.category,
+        categories: editValues.categories,
       });
       setToast({ message: 'Recept bijgewerkt ✅', type: 'success' });
       setEditingId(null);
@@ -108,18 +195,14 @@ export default function DashboardList({
         className="w-full p-3 mb-4 border border-border rounded-xl shadow-sm bg-card text-foreground placeholder:text-muted-foreground focus:outline-primary"
       />
 
-      <select
-        value={selectedCategory}
-        onChange={handleCategoryChange}
-        className="w-full p-3 mb-4 border border-border rounded-xl shadow-sm bg-card text-foreground focus:outline-primary"
-      >
-        <option value="">Alle categorieën</option>
-        {categories.map((category) => (
-          <option key={category} value={category}>
-            {category}
-          </option>
-        ))}
-      </select>
+      {/* Multi-select filtering: dropdown */}
+      <div className="mb-4 max-w-xs">
+        <MultiSelectDropdown
+          selected={selectedCategories}
+          setSelected={setSelectedCategories}
+          disabled={false}
+        />
+      </div>
 
       {filteredItems.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -145,6 +228,7 @@ export default function DashboardList({
                       src={previewUrl}
                       alt={item.name}
                       fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                       className="object-cover rounded-xl"
                       onError={({ currentTarget }) => {
                         currentTarget.style.display = 'none';
@@ -168,7 +252,7 @@ export default function DashboardList({
                         </a>
                       </h2>
                       <p className="text-sm text-muted-foreground">
-                        Categorie: {item.category}
+                        Categorieën: {item.categories?.length ? item.categories.join(', ') : '-'}
                       </p>
                       {item.tags && (
                         <div className="mt-1 text-xs text-muted-foreground">
@@ -203,25 +287,17 @@ export default function DashboardList({
                         type="text"
                         name="name"
                         value={editValues.name}
-                        onChange={handleEditChange}
+                        onChange={handleEditNameChange}
                         className="w-full mb-2 p-2 border border-border rounded-xl text-foreground bg-card placeholder:text-muted-foreground focus:outline-primary"
                         placeholder="Titel"
                         disabled={loadingSave}
                       />
-                      <select
-                        name="category"
-                        value={editValues.category}
-                        onChange={handleEditChange}
-                        className="w-full p-2 border border-border rounded-xl text-foreground bg-card focus:outline-primary"
+                      {/* Multi-select dropdown voor categorieën */}
+                      <MultiSelectDropdown
+                        selected={editValues.categories}
+                        setSelected={handleEditCategories}
                         disabled={loadingSave}
-                      >
-                        <option value="">Categorie kiezen...</option>
-                        {categories.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
                     <div className="mt-2 flex justify-end gap-2">
                       <Button
@@ -253,7 +329,7 @@ export default function DashboardList({
             );
           })}
         </div>
-      ) : searchQuery || selectedCategory ? (
+      ) : searchQuery || selectedCategories.length ? (
         <p className="text-muted-foreground">Geen resultaten gevonden.</p>
       ) : (
         <p className="text-muted-foreground">Je hebt nog geen recepten.</p>
